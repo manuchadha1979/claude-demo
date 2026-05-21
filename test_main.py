@@ -4,8 +4,10 @@ from anthropic_chat_test import MODELS, PROMPT, run_models
 
 KNOWN_VALID_MODELS = [
     "claude-sonnet-4-6",
-    "claude-haiku-4-5-20251001",
     "claude-opus-4-7",
+    "claude-haiku-4-5-20251001",
+    # add valid ones here
+    
 ]
 
 def test_no_unknown_model_names():
@@ -16,7 +18,7 @@ def test_no_unknown_model_names():
 def test_prompt_is_not_empty():
     assert PROMPT.strip() != ""
 
-@patch("main.client")
+@patch("anthropic_chat_test.client")
 def test_run_models_calls_api_for_each_model(mock_client):
     """Verifies we call the API once per model."""
     mock_response = MagicMock()
