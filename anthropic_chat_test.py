@@ -24,7 +24,7 @@ def get_anthropic_client():
         api_key = vault_client.get_secret("ANTHROPIC-API-KEY").value
 
         if not api_key or "..." in api_key:
-            print(f"Error: Retrieved API key is empty or still a placeholder string!")
+            print("Error: Retrieved API key is empty or still a placeholder string!")
             sys.exit(1)
         return anthropic.Anthropic(api_key=api_key)
 
