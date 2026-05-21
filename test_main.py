@@ -18,9 +18,11 @@ def test_no_unknown_model_names():
 def test_prompt_is_not_empty():
     assert PROMPT.strip() != ""
 
-@patch("anthropic_chat_test.client")
-def test_run_models_calls_api_for_each_model(mock_client):
+@patch("anthropic_chat_test.get_anthropic_client")
+def test_run_models_calls_api_for_each_model(mock_get_client):
     """Verifies we call the API once per model."""
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
     mock_response = MagicMock()
     mock_response.content[0].text = "Hello"
     mock_response.usage.input_tokens = 5
