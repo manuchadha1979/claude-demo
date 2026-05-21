@@ -38,4 +38,4 @@ jobs:
       - name: Lint with flake8
         run: |
           pip install flake8
-          flake8 main.py --max-line-length=100
+          flake8 anthropic_chat_test.py --max-line-length=100
