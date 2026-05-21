@@ -8,7 +8,7 @@ MODELS = [
     "claude-haiku-4-5-20251001",
 ]
 
-PROMPT = "hello world"
+PROMPT = "hello world!"
 for model in MODELS:
     response = client.messages.create(
     model =  model,
