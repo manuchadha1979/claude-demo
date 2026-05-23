@@ -1,52 +1,34 @@
-import sys
+import pytest
+from unittest.mock import patch, MagicMock
+from anthropic_chat import MODELS, PROMPT, run_models
 
-import anthropic
-
-from azure.identity import DefaultAzureCredential
-from azure.keyvault.secrets import SecretClient
-
-MODELS = [
+KNOWN_VALID_MODELS = [
     "claude-sonnet-4-6",
     "claude-opus-4-7",
     "claude-haiku-4-5-20251001",
+    # add valid ones here
+    
 ]
 
-PROMPT = "hello world!"
-
-
-def get_anthropic_client():
-    credential = DefaultAzureCredential()
-    vault_client = SecretClient(
-        vault_url="https://claude-demo-vault.vault.azure.net/", credential=credential
-    )
-
-    try:
-        api_key = vault_client.get_secret("ANTHROPIC-API-KEY").value
-
-        if not api_key or "..." in api_key:
-            print("Error: Retrieved API key is empty or still a placeholder string!")
-            sys.exit(1)
-        return anthropic.Anthropic(api_key=api_key)
-
-    except Exception as e:
-        print(f"failed to fetch secret key {e}")
-        sys.exit(1)
-
-
-def run_models():
-    client = get_anthropic_client()
+def test_no_unknown_model_names():
+    """Catches typos in model names before deployment."""
     for model in MODELS:
-        response = client.messages.create(
-            model=model, max_tokens=256, messages=[{"role": "user", "content": PROMPT}]
-        )
+        assert model in KNOWN_VALID_MODELS, f"Unknown model: {model}"
 
-        print(f"\n-- {model} ---")
-        print(f"Response: {response.content[0].text}")
-        print(
-            f"token IN/OUT: {response.usage.input_tokens}/{response.usage.output_tokens}"
-        )
-        print(f"stop reason {response.stop_reason}")
+def test_prompt_is_not_empty():
+    assert PROMPT.strip() != ""
 
+@patch("anthropic_chat.get_anthropic_client")
+def test_run_models_calls_api_for_each_model(mock_get_client):
+    """Verifies we call the API once per model."""
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+    mock_response = MagicMock()
+    mock_response.content[0].text = "Hello"
+    mock_response.usage.input_tokens = 5
+    mock_response.usage.output_tokens = 10
+    mock_response.stop_reason = "end_turn"
+    mock_client.messages.create.return_value = mock_response
 
-if __name__ == "__main__":
     run_models()
+    assert mock_client.messages.create.call_count == len(MODELS)

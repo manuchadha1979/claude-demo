@@ -2,7 +2,7 @@ import json
 import requests
 import anthropic
 from pydantic import BaseModel
-from anthropic_chat_test import get_anthropic_client
+from anthropic_chat import get_anthropic_client
 
 class ToolResult(BaseModel):
     output: str  # Or Any, if your tool returns dicts/lists sometimes
