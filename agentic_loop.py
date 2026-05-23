@@ -7,8 +7,6 @@ class ToolResult(BaseModel):
     output: str  # Or Any, if your tool returns dicts/lists sometimes
 
 
-client = get_anthropic_client()
-
 def execute_tool(name, input_data):
     # Fake implementation so the loop can complete
     if name == "lookup_customer":
@@ -31,32 +29,38 @@ tools = [
 
 messages = [{"role": "user", "content": "Find customer John Smith"}]
 
-while True:
-    response = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=4096,
-        tools=tools,
-        messages=messages
-    )
+def run_agentic_loop():
+    client = get_anthropic_client()
+    while True:
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=4096,
+            tools=tools,
+            messages=messages
+        )
 
-    print(f"response: {json.dumps(response.model_dump(), indent=2)}")
+        print(f"response: {json.dumps(response.model_dump(), indent=2)}")
 
-    if response.stop_reason == "end_turn":
-        print("Final response:", response.content[0].text)
-        break
+        if response.stop_reason == "end_turn":
+            print("Final response:", response.content[0].text)
+            break
 
-    if response.stop_reason == "tool_use":
-        tool_block = next(b for b in response.content if b.type == "tool_use")
-        print(f"tool block {json.dumps(tool_block.model_dump(), indent=2)}")
-        print(f"Claude wants to call: {tool_block.name} with {tool_block.input}")
+        if response.stop_reason == "tool_use":
+            tool_block = next(b for b in response.content if b.type == "tool_use")
+            print(f"tool block {json.dumps(tool_block.model_dump(), indent=2)}")
+            print(f"Claude wants to call: {tool_block.name} with {tool_block.input}")
 
-        result = execute_tool(tool_block.name, tool_block.input)
-        print(f"Tool returned: {json.dumps(result.model_dump(), indent=2)}")
+            result = execute_tool(tool_block.name, tool_block.input)
+            print(f"Tool returned: {json.dumps(result.model_dump(), indent=2)}")
 
-        messages.append({"role": "assistant", "content": response.content})
-        messages.append({
-            "role": "user",
-            "content": [{"type": "tool_result",
-                         "tool_use_id": tool_block.id,
-                         "content": result.output}]
-        })
+            messages.append({"role": "assistant", "content": response.content})
+            messages.append({
+                "role": "user",
+                "content": [{"type": "tool_result",
+                            "tool_use_id": tool_block.id,
+                            "content": result.output}]
+            })
+
+
+if __name__ == "__main__":
+    run_agentic_loop()

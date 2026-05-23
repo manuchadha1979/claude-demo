@@ -8,8 +8,6 @@ class ToolResult(BaseModel):
     output: str  # Or Any, if your tool returns dicts/lists sometimes
 
 
-client = get_anthropic_client()
-
 def execute_tool(name: str, input_data: dict) -> ToolResult:
     """
     Dummy execution layer matching all defined tools.
@@ -125,43 +123,49 @@ tools = [
 
 messages = [{"role": "user", "content": PROMPT}]
 
-while True:
-    response = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=4096,
-        tools=tools,
-        messages=messages
-    )
+def run_agentic_workflow():
+    client = get_anthropic_client()
+    while True:
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=4096,
+            tools=tools,
+            messages=messages
+        )
 
-    print(f"response: {json.dumps(response.model_dump(), indent=2)}")
+        print(f"response: {json.dumps(response.model_dump(), indent=2)}")
 
-    if response.stop_reason == "end_turn":
-        print("Final response:", response.content[0].text)
-        break
+        if response.stop_reason == "end_turn":
+            print("Final response:", response.content[0].text)
+            break
 
-    if response.stop_reason == "tool_use":
-        # Dynamic response generation setup
-        tool_results_content = []
-        
-        # Iterate over all content blocks in case Claude requests multiple parallel tools
-        for block in response.content:
-            if block.type == "tool_use":
-                print(f"Claude wants to call: {block.name} with {block.input}")
-                
-                # Execute the dummy tool
-                result = execute_tool(block.name, block.input)
-                print(f"Tool returned: {json.dumps(result.model_dump(), indent=2)}")
-                
-                # Append tool results in the format Anthropic expects
-                tool_results_content.append({
-                    "type": "tool_result",
-                    "tool_use_id": block.id,
-                    "content": result.output
-                })
-        
-        # Keep conversation state accurate
-        messages.append({"role": "assistant", "content": response.content})
-        messages.append({
-            "role": "user",
-            "content": tool_results_content
-        })
+        if response.stop_reason == "tool_use":
+            # Dynamic response generation setup
+            tool_results_content = []
+            
+            # Iterate over all content blocks in case Claude requests multiple parallel tools
+            for block in response.content:
+                if block.type == "tool_use":
+                    print(f"Claude wants to call: {block.name} with {block.input}")
+                    
+                    # Execute the dummy tool
+                    result = execute_tool(block.name, block.input)
+                    print(f"Tool returned: {json.dumps(result.model_dump(), indent=2)}")
+                    
+                    # Append tool results in the format Anthropic expects
+                    tool_results_content.append({
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": result.output
+                    })
+            
+            # Keep conversation state accurate
+            messages.append({"role": "assistant", "content": response.content})
+            messages.append({
+                "role": "user",
+                "content": tool_results_content
+            })
+
+
+if __name__ == "__main__":
+    run_agentic_workflow()            
