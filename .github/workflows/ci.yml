@@ -32,7 +32,7 @@ jobs:
       - name: Run tests
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}  # from GitHub Secrets
-        run: pytest test_main.py -v
+        run: pytest test_main.py customer_support_agent_test.py -v
 
       # 5. (Optional) Lint — enforce code style
       - name: Lint with flake8
