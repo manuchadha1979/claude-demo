@@ -1,0 +1,7 @@
+[Flake8]
+# Match Black's line length limit
+max-line-length = 88
+
+# E203: Whitespace before ':' (Black does this, Flake8 hates it)
+# W503: Line break before binary operator (Black does this, Flake8 hates it)
+extend-ignore = E203, W503

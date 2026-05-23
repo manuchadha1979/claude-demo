@@ -1,7 +1,7 @@
 import json
-import anthropic
 from anthropic_chat_test import get_anthropic_client
 from pydantic import BaseModel
+
 
 class ToolResult(BaseModel):
     output: str  # Or Any, if your tool returns dicts/lists sometimes
@@ -10,8 +10,11 @@ class ToolResult(BaseModel):
 def execute_tool(name, input_data):
     # Fake implementation so the loop can complete
     if name == "lookup_customer":
-        return ToolResult(output="Found customer: John Smith, ID 123, email john@example.com")
+        return ToolResult(
+            output="Found customer: John Smith, ID 123, email john@example.com"
+        )
     return ToolResult(output="Tool not found")
+
 
 tools = [
     {
@@ -22,21 +25,19 @@ tools = [
             "properties": {
                 "name": {"type": "string", "description": "The customer's full name"}
             },
-            "required": ["name"]
-        }
+            "required": ["name"],
+        },
     }
 ]
 
 messages = [{"role": "user", "content": "Find customer John Smith"}]
 
+
 def run_agentic_loop():
     client = get_anthropic_client()
     while True:
         response = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=4096,
-            tools=tools,
-            messages=messages
+            model="claude-sonnet-4-6", max_tokens=4096, tools=tools, messages=messages
         )
 
         print(f"response: {json.dumps(response.model_dump(), indent=2)}")
@@ -54,12 +55,18 @@ def run_agentic_loop():
             print(f"Tool returned: {json.dumps(result.model_dump(), indent=2)}")
 
             messages.append({"role": "assistant", "content": response.content})
-            messages.append({
-                "role": "user",
-                "content": [{"type": "tool_result",
+            messages.append(
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "tool_result",
                             "tool_use_id": tool_block.id,
-                            "content": result.output}]
-            })
+                            "content": result.output,
+                        }
+                    ],
+                }
+            )
 
 
 if __name__ == "__main__":

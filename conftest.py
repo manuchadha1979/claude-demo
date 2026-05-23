@@ -1,6 +1,5 @@
 import pytest
 from unittest.mock import patch
-import anthropic
 
 @pytest.fixture(autouse=True)
 def mock_azure_and_anthropic():

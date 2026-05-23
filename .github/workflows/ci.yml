@@ -35,8 +35,8 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}  # from GitHub Secrets
         run: pytest anthropic_chat_test.py customer_support_agent_test.py -v
 
-      # 5. (Optional) Lint — enforce code style
-      - name: Lint with flake8
+      # 5. Lint — enforce code style
+      - name: Lint with Ruff
         run: |
-          pip install flake8
-          flake8 anthropic_chat_test.py --max-line-length=100
+          pip install ruff
+          ruff check . --output-format=github
