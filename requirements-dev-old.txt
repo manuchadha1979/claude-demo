@@ -1,0 +1,7 @@
+# 1. Pull in all core production dependencies automatically
+-r requirements.txt
+
+# 2. Add dev-only tools on top
+pytest
+black
+flake8
