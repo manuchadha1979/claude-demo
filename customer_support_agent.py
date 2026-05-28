@@ -2,6 +2,7 @@ import json
 import requests
 from pydantic import BaseModel
 from anthropic_chat import get_anthropic_client
+from hubspot_client import lookup_crm_contact
 
 
 class ToolResult(BaseModel):
@@ -15,14 +16,35 @@ def execute_tool(name: str, input_data: dict) -> ToolResult:
     if name == "get_ticket":
         ticket_id = input_data.get("id", "UNKNOWN")
         return ToolResult(
-            output=f"Fetched Freshdesk ticket {ticket_id}: 'Issue with login', status: Open"
+            output=f"Fetched Freshdesk ticket {ticket_id}: 'Issue with login', status: Open, customer's email id is bh@hubspot.com"
         )
 
     elif name == "lookup_crm_contact":
-        email = input_data.get("emailid", "unknown@example.com")
-        return ToolResult(
-            output=f"Found HubSpot CRM contact: John Smith, ID 123, email: {email}"
-        )
+        # 1. Extract the email from Claude's input data
+        email = input_data.get("emailid", "")
+
+        if email:
+            # 2. Call the function and store the resulting dictionary
+            contact_data = lookup_crm_contact(email)
+
+            # 3. Parse the result dynamically
+            if contact_data:
+                # Safely pull out values using .get() to avoid KeyErrors if a property is missing
+                contact_id = contact_data.get("id")
+                first_name = contact_data.get("firstname", "")
+                last_name = contact_data.get("lastname", "")
+                full_name = f"{first_name} {last_name}".strip() or "Unknown Name"
+                
+                output_text = f"Found HubSpot CRM contact: {full_name}, ID: {contact_id}, email: {email}"
+            else:
+                # Handle the fallback case where return {} was hit
+                output_text = f"No HubSpot CRM contact found matching email: {email}"
+        # ... inside the final else block ...
+        else:
+            output_text = "Error: 'emailid' parameter was missing or empty. Please provide a valid email address."
+
+        # 4. Return the populated ToolResult model
+        return ToolResult(output=output_text)
 
     elif name == "query_order_history":
         return ToolResult(
@@ -45,8 +67,6 @@ def execute_tool(name: str, input_data: dict) -> ToolResult:
     return ToolResult(output=f"Tool '{name}' not found")
 
 
-HUBSPOT_TOKEN = "6d5d476f-cfc1-44e6-985a-c7d51f7458e7"
-BASE = "https://api.hubapi.com"
 PROMPT = """Hey, can you look into Freshdesk ticket #84920? 
 Find the customer's email from that ticket so you can pull up their contact profile in HubSpot.
 Once you have their details, check their full order history in our Supabase DB to see why
@@ -54,39 +74,6 @@ Once you have their details, check their full order history in our Supabase DB t
  resolution update via SendGrid. Also, please ping the #operations team on Slack
  to let them know we are escalating a shipping delay for this customer. 
  Finally, once all of that is done, go ahead and mark the Freshdesk ticket as resolved."""
-
-
-def lookup_crm_contact(email: str) -> dict:
-    resp = requests.get(
-        f"{BASE}/crm/v3/objects/contacts/search",
-        headers={"Authorization": f"Bearer {HUBSPOT_TOKEN}"},
-        json={
-            "filterGroups": [
-                {
-                    "filters": [
-                        {"propertyName": "email", "operator": "EQ", "value": email}
-                    ]
-                }
-            ]
-        },
-    )
-    results = resp.json().get("results", [])
-    return results[0] if results else {}
-
-
-def create_deal(contact_id: str, deal_name: str, amount: float) -> dict:
-    resp = requests.post(
-        f"{BASE}/crm/v3/objects/deals",
-        headers={"Authorization": f"Bearer {HUBSPOT_TOKEN}"},
-        json={
-            "properties": {
-                "dealname": deal_name,
-                "amount": str(amount),
-                "dealstage": "appointmentscheduled",
-            }
-        },
-    )
-    return resp.json()
 
 
 tools = [
