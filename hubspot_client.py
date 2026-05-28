@@ -1,6 +1,5 @@
-import os
 from hubspot import HubSpot
-from hubspot.crm.contacts import SimplePublicObjectInputForCreate, PublicObjectSearchRequest
+from hubspot.crm.contacts import PublicObjectSearchRequest
 from hubspot.crm.contacts.exceptions import ApiException
 from azure.keyvault.secrets import SecretClient
 from azure.identity import DefaultAzureCredential

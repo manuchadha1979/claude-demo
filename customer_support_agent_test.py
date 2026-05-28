@@ -1,9 +1,7 @@
 import pytest
-import requests_mock
 from pydantic import ValidationError
 from customer_support_agent import (
     execute_tool,
-    lookup_crm_contact,
     ToolResult
 )
 from unittest.mock import patch, MagicMock

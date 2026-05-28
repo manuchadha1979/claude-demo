@@ -1,5 +1,4 @@
 import json
-import requests
 from pydantic import BaseModel
 from anthropic_chat import get_anthropic_client
 from hubspot_client import lookup_crm_contact
