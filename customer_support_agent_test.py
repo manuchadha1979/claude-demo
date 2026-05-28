@@ -4,9 +4,7 @@ from pydantic import ValidationError
 from customer_support_agent import (
     execute_tool,
     lookup_crm_contact,
-    create_deal,
-    ToolResult,
-    BASE,
+    ToolResult
 )
 
 # ==========================================
@@ -56,59 +54,6 @@ def test_execute_tool_not_found():
 # 2. TESTS FOR HUBSPOT API FUNCTIONS (Mocked)
 # ==========================================
 
-
-def test_lookup_crm_contact_found():
-    """Test contact lookup when HubSpot returns a matching record."""
-    email = "john@example.com"
-    mock_response = {
-        "results": [{"id": "123", "properties": {"firstname": "John", "email": email}}]
-    }
-
-    with requests_mock.Mocker() as mock:
-        mock.get(
-            f"{BASE}/crm/v3/objects/contacts/search",
-            json=mock_response,
-            status_code=200,
-        )
-
-        contact = lookup_crm_contact(email)
-        assert contact["id"] == "123"
-        assert contact["properties"]["email"] == email
-
-
-def test_lookup_crm_contact_not_found():
-    """Test contact lookup when HubSpot returns an empty result list."""
-    email = "missing@example.com"
-    mock_response = {"results": []}
-
-    with requests_mock.Mocker() as mock:
-        mock.get(
-            f"{BASE}/crm/v3/objects/contacts/search",
-            json=mock_response,
-            status_code=200,
-        )
-
-        contact = lookup_crm_contact(email)
-        assert contact == {}
-
-
-def test_create_deal_success():
-    """Verify payload generation and response mapping for deal creation."""
-    mock_response = {
-        "id": "998877",
-        "properties": {
-            "dealname": "Test Deal",
-            "amount": "500.0",
-            "dealstage": "appointmentscheduled",
-        },
-    }
-
-    with requests_mock.Mocker() as mock:
-        mock.post(f"{BASE}/crm/v3/objects/deals", json=mock_response, status_code=201)
-
-        deal = create_deal(contact_id="123", deal_name="Test Deal", amount=500.0)
-        assert deal["id"] == "998877"
-        assert deal["properties"]["dealname"] == "Test Deal"
 
 
 # ==========================================

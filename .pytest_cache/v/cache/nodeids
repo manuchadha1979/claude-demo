@@ -1,0 +1,11 @@
+[
+  "customer_support_agent_test.py::test_execute_tool_get_ticket_missing_id",
+  "customer_support_agent_test.py::test_execute_tool_get_ticket_success",
+  "customer_support_agent_test.py::test_execute_tool_lookup_crm_contact_success",
+  "customer_support_agent_test.py::test_execute_tool_not_found",
+  "customer_support_agent_test.py::test_execute_tool_static_responses",
+  "customer_support_agent_test.py::test_lookup_crm_contact_found",
+  "customer_support_agent_test.py::test_lookup_crm_contact_not_found",
+  "customer_support_agent_test.py::test_tool_result_validation_failure",
+  "customer_support_agent_test.py::test_tool_result_validation_success"
+]

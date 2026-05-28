@@ -1,0 +1,4 @@
+{
+  "customer_support_agent_test.py::test_lookup_crm_contact_found": true,
+  "customer_support_agent_test.py::test_lookup_crm_contact_not_found": true
+}
