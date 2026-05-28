@@ -1,4 +1,7 @@
 [
+  "anthropic_chat_test.py::test_no_unknown_model_names",
+  "anthropic_chat_test.py::test_prompt_is_not_empty",
+  "anthropic_chat_test.py::test_run_models_calls_api_for_each_model",
   "customer_support_agent_test.py::test_execute_tool_get_ticket_missing_id",
   "customer_support_agent_test.py::test_execute_tool_get_ticket_success",
   "customer_support_agent_test.py::test_execute_tool_lookup_crm_contact_success",

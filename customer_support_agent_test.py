@@ -6,6 +6,7 @@ from customer_support_agent import (
     lookup_crm_contact,
     ToolResult
 )
+from unittest.mock import patch, MagicMock
 
 # ==========================================
 # 1. TESTS FOR execute_tool (Local Router)
@@ -28,12 +29,40 @@ def test_execute_tool_get_ticket_missing_id():
     result = execute_tool("get_ticket", payload)
     assert "UNKNOWN" in result.output
 
+@patch("hubspot_client.SecretClient")
+@patch("hubspot_client.DefaultAzureCredential")
+@patch("hubspot_client.HubSpot")
+def test_execute_tool_lookup_crm_contact_success(mock_hubspot, mock_cred, mock_secret_client):
+    """Verify look up contact uses a mocked Azure and HubSpot context."""
+    
+    # 1. Mock the Azure Key Vault secret value return
+    mock_vault_instance = MagicMock()
+    mock_vault_instance.get_secret.return_value.value = "mocked-service-key-12345"
+    mock_secret_client.return_value = mock_vault_instance
 
-def test_execute_tool_lookup_crm_contact_success():
-    """Verify look up contact uses the custom parameter key."""
+    # 2. Mock the HubSpot API search return payload
+    mock_hubspot_instance = MagicMock()
+    mock_search_result = MagicMock()
+    mock_contact = MagicMock()
+    
+    mock_contact.id = "12345"
+    mock_contact.properties = {
+        "firstname": "John",
+        "lastname": "Doe",
+        "email": "test@example.com"
+    }
+    
+    mock_search_result.results = [mock_contact]
+    mock_hubspot_instance.crm.contacts.search_api.do_search.return_value = mock_search_result
+    mock_hubspot.return_value = mock_hubspot_instance
+
+    # 3. Execute your tool execution block
     payload = {"emailid": "test@example.com"}
     result = execute_tool("lookup_crm_contact", payload)
-    assert "test@example.com" in result.output
+    
+    # 4. Assert that your agent logic formatted the mock data perfectly
+    assert "John" in result.output
+    assert "12345" in result.output
 
 
 def test_execute_tool_static_responses():
