@@ -2,7 +2,7 @@ import json
 from pydantic import BaseModel
 from anthropic_chat import get_anthropic_client
 from hubspot_client import lookup_crm_contact
-
+from jsm_client import get_ticket
 
 class ToolResult(BaseModel):
     output: str  # Or Any, if your tool returns dicts/lists sometimes
@@ -13,10 +13,17 @@ def execute_tool(name: str, input_data: dict) -> ToolResult:
     Dummy execution layer matching all defined tools.
     """
     if name == "get_ticket":
-        ticket_id = input_data.get("id", "UNKNOWN")
+        ticket_id = input_data.get("id", "")
+        if ticket_id:
+            ticket_details = get_ticket(ticket_id)
+            if ticket_details:
+                result = ticket_details.get("result")
+                output_text = f"Fetched JSM ticket {ticket_id}: 'Issue: {result}"
+        else:
+            output_text = "Error: ticket id parameter was missing or empty. Please provide a valid ticket id."
         return ToolResult(
-            output=f"Fetched Freshdesk ticket {ticket_id}: 'Issue with login', status: Open, customer's email id is bh@hubspot.com"
-        )
+                    output=output_text
+            )    
 
     elif name == "lookup_crm_contact":
         # 1. Extract the email from Claude's input data
@@ -66,7 +73,7 @@ def execute_tool(name: str, input_data: dict) -> ToolResult:
     return ToolResult(output=f"Tool '{name}' not found")
 
 
-PROMPT = """Hey, can you look into Freshdesk ticket #84920? 
+PROMPT = """Hey, can you look into JSM ticket SUP-1? 
 Find the customer's email from that ticket so you can pull up their contact profile in HubSpot.
 Once you have their details, check their full order history in our Supabase DB to see why
  they are complaining about a missing shipment. If you find the issue, go ahead and send them a

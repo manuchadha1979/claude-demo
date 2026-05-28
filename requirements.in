@@ -3,3 +3,4 @@ azure-identity
 azure-keyvault-secrets
 pydantic
 hubspot-api-client
+requests
