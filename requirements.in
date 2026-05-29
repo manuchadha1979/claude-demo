@@ -5,3 +5,4 @@ pydantic
 hubspot-api-client
 requests
 supabase
+slack_sdk

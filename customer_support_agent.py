@@ -4,6 +4,7 @@ from anthropic_chat import get_anthropic_client
 from hubspot_client import lookup_crm_contact
 from jsm_client import get_ticket
 from supabase_client import lookup_customer_orders
+from slack_client import post_message_to_channel
 
 class ToolResult(BaseModel):
     output: str  # Or Any, if your tool returns dicts/lists sometimes
@@ -98,9 +99,35 @@ def execute_tool(name: str, input_data: dict) -> ToolResult:
         )
 
     elif name == "post_slack_message":
-        return ToolResult(
-            output="Slack notification sent successfully to #escalations channel."
-        )
+        # 1. Extract the channel ID and message content from Claude's input data
+        channel_id = input_data.get("channelid", "").strip()
+        message_text = input_data.get("message", "").strip()
+
+        if channel_id and message_text:
+            # 2. Call the Slack client function to post the message
+            slack_response = post_message_to_channel(channel_id=channel_id, message_text=message_text)
+
+            # 3. Parse the result dynamically based on what our function returns
+            if "error" in slack_response:
+                # Handle Slack API or execution errors safely
+                output_text = f"Failed to send Slack message to channel '{channel_id}'. Error: {slack_response['error']}"
+            else:
+                # Handle successful message delivery
+                timestamp = slack_response.get("ts", "unknown")
+                output_text = f"Successfully posted message to Slack channel '{channel_id}' at timestamp {timestamp}."
+                
+        else:
+            # Handle missing parameters gracefully
+            missing_params = []
+            if not channel_id: 
+                missing_params.append("'channel'")
+            if not message_text: 
+                missing_params.append("'message'")
+            
+            output_text = f"Error: Missing required parameter(s): {', '.join(missing_params)}. Please provide both a valid channel ID and a message."
+
+        # 4. Return the populated ToolResult model back to the AI agent
+        return ToolResult(output=output_text)
 
     elif name == "close_ticket":
         return ToolResult(output="Freshdesk API success: Ticket marked as resolved.")
@@ -112,7 +139,7 @@ PROMPT = """Hey, can you look into JSM ticket SUP-1?
 Find the customer's email from that ticket so you can pull up their contact profile in HubSpot.
 Once you have their details, check their full order history in our Supabase DB to see why
  they are complaining about a missing shipment. If you find the issue, go ahead and send them a
- resolution update via SendGrid. Also, please ping the #operations team on Slack
+ resolution update via SendGrid. Also, please ping the #escalations team on Slack
  to let them know we are escalating a shipping delay for this customer. 
  Finally, once all of that is done, go ahead and mark the Freshdesk ticket as resolved."""
 
@@ -123,7 +150,8 @@ tools = [
         "description": "Fetch ticket from JSM by ID",
         "input_schema": {
             "type": "object",
-            "properties": {"id": {"type": "string", "description": "customers ID"}},
+            "properties": {"id": {"type": "string", "description": "customers ID"}
+            },
             "required": ["id"],
         },
     },
@@ -135,6 +163,7 @@ tools = [
             "properties": {
                 "emailid": {"type": "string", "description": "customer email ID"}
             },
+            "required": ["emailid"]
         },
     },
     {
@@ -142,7 +171,9 @@ tools = [
         "description": "Fetch orders from Supabase DB",
         "input_schema": {
             "type": "object",
-            "properties": {"emailid": {"type": "string", "description": "email ID"}},
+            "properties": {"emailid": {"type": "string", "description": "email ID"}
+            },
+            "required": ["emailid"]
         },
     },
     {
@@ -153,6 +184,7 @@ tools = [
             "properties": {
                 "emailid": {"type": "string", "description": "customer email ID"}
             },
+            "required": ["emailid"]
         },
     },
     {
@@ -161,8 +193,10 @@ tools = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "channelid": {"type": "string", "description": "slack channel ID"}
+                "channelid": {"type": "string", "description": "slack channel ID"},
+                "message": {"type": "string", "description": "message to send on the slack channel"}
             },
+            "required": ["channelid","message"]
         },
     },
     {
@@ -170,7 +204,9 @@ tools = [
         "description": "Mark Freshdesk ticket resolved",
         "input_schema": {
             "type": "object",
-            "properties": {"ticketID": {"type": "string", "description": "ticket ID"}},
+            "properties": {"ticketID": {"type": "string", "description": "ticket ID"}
+            },
+            "required": ["ticketID"]
         },
     },
 ]
