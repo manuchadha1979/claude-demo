@@ -5,6 +5,7 @@ from hubspot_client import lookup_crm_contact
 from jsm_client import get_ticket,get_available_transitions,apply_ticket_transition
 from supabase_client import lookup_customer_orders
 from slack_client import post_message_to_channel
+from gmail_client import send_gmail_email
 
 class ToolResult(BaseModel):
     output: str  # Or Any, if your tool returns dicts/lists sometimes
@@ -94,9 +95,34 @@ def execute_tool(name: str, input_data: dict) -> ToolResult:
             # 4. Return the populated ToolResult model
         return ToolResult(output=output_text)
     elif name == "send_email":
-        return ToolResult(
-            output="SendGrid success: Resolution email sent successfully."
-        )
+        # 1. Extract parameters from the agent's input data
+        to_email = input_data.get("to_email", "").strip() or input_data.get("recipient", "").strip()
+        subject = input_data.get("subject", "").strip()
+        body_content = input_data.get("body", "").strip() or input_data.get("body_content", "").strip()
+
+        # 2. Ensure all required parameters are present
+        if to_email and subject and body_content:
+            try:
+                # 3. Call the Gmail function (which pulls credentials from Azure Vault)
+                send_gmail_email(to_email=to_email, subject=subject, body_content=body_content)
+                output_text = f"Successfully sent email to '{to_email}' with subject: '{subject}'."
+            except Exception as e:
+                # Handle execution or SMTP login errors safely
+                output_text = f"Failed to send email to '{to_email}'. Error details: {str(e)}"
+                
+        else:
+            # 4. Handle missing parameters gracefully
+            missing_params = []
+            if not to_email: 
+                missing_params.append("'to_email'")
+            if not subject: 
+                missing_params.append("'subject'")
+            if not body_content: 
+                missing_params.append("'body'")
+            
+            output_text = f"Error: Missing required parameter(s): {', '.join(missing_params)}. To dispatch an email, please provide the recipient's address, a subject line, and the message body."
+        
+        return ToolResult(output=output_text)
     elif name == "change_ticket_status":
         # 1. Extract parameters from Claude's input data
         ticket_id = input_data.get("ticketID", "").strip() or input_data.get("ticket_id", "").strip()
@@ -231,9 +257,11 @@ tools = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "emailid": {"type": "string", "description": "customer email ID"}
+                "to_email": {"type": "string", "description": "customer email ID"},
+                "subject": {"type": "string", "description": "subject of the email"},
+                "body_content": {"type": "string", "description": "body of the email"},
             },
-            "required": ["emailid"]
+            "required": ["emailid","subject","body_content"]
         },
     },
     {
