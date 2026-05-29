@@ -1,10 +1,8 @@
 import pytest
 from pydantic import ValidationError
-from customer_support_agent import (
-    execute_tool,
-    ToolResult
-)
 from unittest.mock import patch, MagicMock
+from customer_support_agent import execute_tool, ToolResult
+
 
 # ==========================================
 # 1. TESTS FOR execute_tool (Local Router)
@@ -50,12 +48,6 @@ def test_execute_tool_get_ticket_success(mock_request, mock_cred, mock_secret_cl
     assert isinstance(result, ToolResult)
     assert "12345" in result.output
     assert "Open" in result.output
-
-@patch("jsm_client.SecretClient")
-@patch("jsm_client.DefaultAzureCredential")
-@patch("jsm_client.requests.request")
-from unittest.mock import patch, MagicMock
-from customer_support_agent import execute_tool, ToolResult
 
 @patch('jsm_client.SecretClient')
 @patch('jsm_client.DefaultAzureCredential')
