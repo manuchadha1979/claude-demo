@@ -2,7 +2,7 @@ import json
 from pydantic import BaseModel
 from anthropic_chat import get_anthropic_client
 from hubspot_client import lookup_crm_contact
-from jsm_client import get_ticket
+from jsm_client import get_ticket,get_available_transitions,apply_ticket_transition
 from supabase_client import lookup_customer_orders
 from slack_client import post_message_to_channel
 
@@ -11,7 +11,7 @@ class ToolResult(BaseModel):
 
 
 def execute_tool(name: str, input_data: dict) -> ToolResult:
-    
+    print(f"executing tool {name} with input {input_data}")
     if name == "get_ticket":
         ticket_id = input_data.get("id", "")
         if ticket_id:
@@ -97,7 +97,59 @@ def execute_tool(name: str, input_data: dict) -> ToolResult:
         return ToolResult(
             output="SendGrid success: Resolution email sent successfully."
         )
+    elif name == "change_ticket_status":
+        # 1. Extract parameters from Claude's input data
+        ticket_id = input_data.get("ticketID", "").strip() or input_data.get("ticket_id", "").strip()
+        transition_choice = input_data.get("transition", "").strip() or input_data.get("transition_name_or_id", "").strip()
+        reason = input_data.get("reason", "").strip()
 
+        # 2. Ensure all required parameters are present
+        if ticket_id and transition_choice and reason:
+            # 3. Execute the status change and update the ticket with the comment
+            execution_result = apply_ticket_transition(
+                ticket_id=ticket_id, 
+                transition_name_or_id=transition_choice, 
+                reason=reason
+            )
+
+            # 4. Check the dictionary result returned by your function
+            if "Error" in execution_result.get("result", ""):
+                output_text = f"Failed to update ticket '{ticket_id}'. {execution_result['result']}"
+            else:
+                output_text = f"Successfully updated ticket '{ticket_id}'. Details: {execution_result['result']}"
+                
+        else:
+            # 5. Handle missing parameters gracefully
+            missing_params = []
+            if not ticket_id: 
+                missing_params.append("'id'")
+            if not transition_choice: 
+                missing_params.append("'transition'")
+            if not reason: 
+                missing_params.append("'reason'")
+            output_text = f"Error: Missing required parameter(s): {', '.join(missing_params)}. To change a ticket status, please provide the ticket ID, the target transition, and a reason/comment."
+        return ToolResult(output=output_text)
+    elif name == "get_ticket_transitions":
+        # 1. Extract the ticket ID from the agent's input data
+        ticket_id = input_data.get("ticketID", "").strip() or input_data.get("ticket_id", "").strip()
+
+        if ticket_id:
+            # 2. Call our tool function to pull transitions from Jira
+            transitions_list = get_available_transitions(ticket_id=ticket_id)
+
+            # 3. Parse the result dynamically based on what our function returns
+            if not transitions_list:
+                # Handle cases where no transitions are returned or an API error occurred
+                output_text = f"Failed to retrieve transitions for ticket '{ticket_id}', or there are no valid transitions available for its current status."
+            else:
+                # Handle successful data retrieval and format it into a readable string for the agent
+                formatted_transitions = [f"Name: '{t['name']}' (ID: {t['id']})" for t in transitions_list]
+                output_text = f"Successfully retrieved available transitions for ticket '{ticket_id}':\n" + "\n".join(formatted_transitions)
+                
+        else:
+            # Handle missing parameters gracefully
+            output_text = "Error: Missing required parameter: 'id' (ticket ID). Please provide a valid Jira ticket identifier."
+        return ToolResult(output=output_text)
     elif name == "post_slack_message":
         # 1. Extract the channel ID and message content from Claude's input data
         channel_id = input_data.get("channelid", "").strip()
@@ -128,11 +180,8 @@ def execute_tool(name: str, input_data: dict) -> ToolResult:
 
         # 4. Return the populated ToolResult model back to the AI agent
         return ToolResult(output=output_text)
-
-    elif name == "close_ticket":
-        return ToolResult(output="Freshdesk API success: Ticket marked as resolved.")
-
-    return ToolResult(output=f"Tool '{name}' not found")
+    else:
+        return ToolResult(output=f"Tool '{name}' not found")
 
 
 PROMPT = """Hey, can you look into JSM ticket SUP-1? 
@@ -141,7 +190,7 @@ Once you have their details, check their full order history in our Supabase DB t
  they are complaining about a missing shipment. If you find the issue, go ahead and send them a
  resolution update via SendGrid. Also, please ping the #escalations team on Slack
  to let them know we are escalating a shipping delay for this customer. 
- Finally, once all of that is done, go ahead and mark the Freshdesk ticket as resolved."""
+ Finally, once all of that is done, go ahead and change the status of the ticket in jsm"""
 
 
 tools = [
@@ -200,15 +249,28 @@ tools = [
         },
     },
     {
-        "name": "close_ticket",
-        "description": "Mark Freshdesk ticket resolved",
+        "name": "change_ticket_status",
+        "description": "Change the status of the ticket depending on the update on its progress.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"ticketID": {"type": "string", "description": "ticket ID"},
+                           "transition_name_or_id": {"type": "string", "description": "next transition name or id"},
+                           "reason": {"type": "string", "description": "reason for the transition"}
+
+            },
+            "required": ["ticketID","transition_name_or_id","reason"]
+        },
+    },
+    {
+        "name": "get_ticket_transitions",
+        "description": "Get possition values of transitions of status of the ticket based on current status. Next possible transition states depend on current state",
         "input_schema": {
             "type": "object",
             "properties": {"ticketID": {"type": "string", "description": "ticket ID"}
             },
             "required": ["ticketID"]
         },
-    },
+    }
 ]
 
 messages = [{"role": "user", "content": PROMPT}]
