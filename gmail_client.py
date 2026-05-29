@@ -1,6 +1,9 @@
-import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from azure.identity import DefaultAzureCredential
+from azure.keyvault.secrets import SecretClient
+import smtplib
+
 
 # --- AZURE & GMAIL CONFIGURATION ---
 SENDER_EMAIL = "manuchadha25@gmail.com"
@@ -8,8 +11,6 @@ VAULT_URL = "https://claude-demo-vault.vault.azure.net/"
 SECRET_NAME = "GMAIL-APP-PASSWORD"  # The name you gave the secret in Azure
 
 # Note: You WILL need to import these Azure packages (just like your Jira code)
-from azure.identity import DefaultAzureCredential
-from azure.keyvault.secrets import SecretClient
 
 def get_gmail_password_from_vault() -> str:
     """Fetches the 16-character Gmail App Password from Azure Key Vault."""
