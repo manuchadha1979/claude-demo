@@ -98,8 +98,8 @@ def test_execute_tool_get_ticket_success(mock_request, mock_cred, mock_secret_cl
     assert "Open" in result.output
 
 
-@patch('jsm_client.SecretClient')
-@patch('jsm_client.DefaultAzureCredential')
+@patch("jsm_client.SecretClient")
+@patch("jsm_client.DefaultAzureCredential")
 def test_execute_tool_get_ticket_missing_id(mock_cred, mock_secret_client):
     """Verify fallback string when ticket ID is unexpectedly absent, without hitting Azure."""
     
