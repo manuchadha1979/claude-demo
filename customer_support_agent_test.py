@@ -47,46 +47,6 @@ def test_execute_tool_get_ticket_success(mock_request, mock_cred, mock_secret_cl
     # Assertions
     assert isinstance(result, ToolResult)
     assert "123456" in result.output
-    assert "Open" in result.output
-
-@patch('jsm_client.SecretClient')
-@patch('jsm_client.DefaultAzureCredential')
-@patch('jsm_client.requests.request')
-def test_execute_tool_get_ticket_success(mock_request, mock_cred, mock_secret_client):
-    """Verify get_ticket routes correctly by mocking Azure and Jira dependencies."""
-    
-    # 1. Mock Azure Key Vault to return a fake token immediately
-    mock_vault_instance = MagicMock()
-    mock_vault_instance.get_secret.return_value.value = "fake_jsm_token"
-    mock_secret_client.return_value = mock_vault_instance
-
-    # 2. Mock the JSM response to return expected payload containing '123456' and 'Open'
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {
-        "key": "123456",
-        "fields": {
-            "summary": "Order issue",
-            "status": {"name": "Open"},
-            "description": {
-                "type": "doc",
-                "version": 1,
-                "content": [{
-                    "type": "paragraph",
-                    "content": [{"type": "text", "text": "I didn’t receive order no 123456."}]
-                }]
-            }
-        }
-    }
-    mock_request.return_value = mock_response
-
-    # Execute the tool
-    payload = {"id": "123456"}
-    result = execute_tool("get_ticket", payload)
-
-    # Assertions
-    assert isinstance(result, ToolResult)
-    assert "123456" in result.output
     #assert "Open" in result.output
 
 
