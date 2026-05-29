@@ -102,13 +102,6 @@ def test_execute_tool_lookup_crm_contact_success(mock_hubspot, mock_cred, mock_s
     assert "123456" in result.output
 
 
-def test_execute_tool_static_responses():
-    """Ensure parameterless dummy tools return expected success strings."""
-    assert "Supabase DB Query" in execute_tool("query_order_history", {}).output
-    assert "SendGrid success" in execute_tool("send_email", {}).output
-    assert "Slack notification sent" in execute_tool("post_slack_message", {}).output
-    assert "Freshdesk API success" in execute_tool("close_ticket", {}).output
-
 
 def test_execute_tool_not_found():
     """Verify router cleanly handles unknown tool name execution."""

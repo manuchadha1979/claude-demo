@@ -4,3 +4,4 @@ azure-keyvault-secrets
 pydantic
 hubspot-api-client
 requests
+supabase

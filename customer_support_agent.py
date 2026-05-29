@@ -3,15 +3,14 @@ from pydantic import BaseModel
 from anthropic_chat import get_anthropic_client
 from hubspot_client import lookup_crm_contact
 from jsm_client import get_ticket
+from supabase_client import lookup_customer_orders
 
 class ToolResult(BaseModel):
     output: str  # Or Any, if your tool returns dicts/lists sometimes
 
 
 def execute_tool(name: str, input_data: dict) -> ToolResult:
-    """
-    Dummy execution layer matching all defined tools.
-    """
+    
     if name == "get_ticket":
         ticket_id = input_data.get("id", "")
         if ticket_id:
@@ -53,10 +52,46 @@ def execute_tool(name: str, input_data: dict) -> ToolResult:
         return ToolResult(output=output_text)
 
     elif name == "query_order_history":
-        return ToolResult(
-            output="Supabase DB Query: Found 2 past orders. Order #9081 (Shipped), Order #4321 (Delivered)"
-        )
+        # 1. Extract the email from Claude's input data
+        email = input_data.get("emailid", "")
 
+        if email:
+            # 2. Call the Supabase function and store the resulting list of orders
+            order_data = lookup_customer_orders(email)
+
+            # 3. Parse the result dynamically
+            # Since Supabase returns a list (or an error dict), we handle both
+            if isinstance(order_data, list) and len(order_data) > 0:
+                order_lines = []
+                
+                # Loop through each order found for this customer
+                for order in order_data:
+                    order_id = order.get("id")
+                    total_amount = order.get("total_amount", 0.0)
+                    status = order.get("status", "unknown")
+                    created_at = order.get("created_at", "")
+                    
+                    # Format a clean string line for this specific order
+                    order_lines.append(
+                        f"- Order ID: {order_id} | Amount: ${total_amount:.2f} | Status: {status} | Date: {created_at}"
+                    )
+                
+                # Combine all the order lines into one final message
+                all_orders_text = "\n".join(order_lines)
+                output_text = f"Found the following order history for {email}:\n{all_orders_text}"
+                
+            elif isinstance(order_data, dict) and "error" in order_data:
+                # Handle database execution errors safely
+                output_text = f"An error occurred while fetching orders: {order_data['error']}"
+            else:
+                # Handle the fallback case where the list was empty []
+                output_text = f"No order history found matching customer email: {email}"
+                
+        else:
+            output_text = "Error: 'emailid' parameter was missing or empty. Please provide a valid email address."
+
+            # 4. Return the populated ToolResult model
+        return ToolResult(output=output_text)
     elif name == "send_email":
         return ToolResult(
             output="SendGrid success: Resolution email sent successfully."
@@ -85,7 +120,7 @@ Once you have their details, check their full order history in our Supabase DB t
 tools = [
     {
         "name": "get_ticket",
-        "description": "Fetch ticket from Freshdesk by ID",
+        "description": "Fetch ticket from JSM by ID",
         "input_schema": {
             "type": "object",
             "properties": {"id": {"type": "string", "description": "customers ID"}},
@@ -107,7 +142,7 @@ tools = [
         "description": "Fetch orders from Supabase DB",
         "input_schema": {
             "type": "object",
-            "properties": {"orderid": {"type": "string", "description": "Order ID"}},
+            "properties": {"emailid": {"type": "string", "description": "email ID"}},
         },
     },
     {
