@@ -10,22 +10,109 @@ from unittest.mock import patch, MagicMock
 # 1. TESTS FOR execute_tool (Local Router)
 # ==========================================
 
+@patch("jsm_client.SecretClient")
+@patch("jsm_client.DefaultAzureCredential")
+@patch("jsm_client.requests.request")
 
-def test_execute_tool_get_ticket_success():
-    """Verify get_ticket routes correctly and processes input parameters."""
+def test_execute_tool_get_ticket_success(mock_request, mock_cred, mock_secret_client):
+    """Verify get_ticket routes correctly by mocking Azure and Jira dependencies."""
+
+    # 1. Mock Azure Key Vault to return a fake token immediately
+    mock_vault_instance = MagicMock()
+    mock_vault_instance.get_secret.return_value.value = "fake_jsm_token"
+    mock_secret_client.return_value = mock_vault_instance
+
+    # 2. Mock the JSM response to return expected payload containing '12345' and 'Open'
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "key": "12345",
+        "fields": {
+            "summary": "Order issue",
+            "status": {"name": "Open"},
+            "description": {
+                "type": "doc",
+                "version": 1,
+                "content": [{
+                    "type": "paragraph",
+                    "content": [{"type": "text", "text": "I didn’t receive order no 123456."}]
+                }]
+            }
+        }
+    }
+    mock_request.return_value = mock_response
+
+    # Execute the tool
     payload = {"id": "12345"}
     result = execute_tool("get_ticket", payload)
 
+    # Assertions
+    assert isinstance(result, ToolResult)
+    assert "12345" in result.output
+    assert "Open" in result.output
+
+@patch("jsm_client.SecretClient")
+@patch("jsm_client.DefaultAzureCredential")
+@patch("jsm_client.requests.request")
+from unittest.mock import patch, MagicMock
+from customer_support_agent import execute_tool, ToolResult
+
+@patch('jsm_client.SecretClient')
+@patch('jsm_client.DefaultAzureCredential')
+@patch('jsm_client.requests.request')
+def test_execute_tool_get_ticket_success(mock_request, mock_cred, mock_secret_client):
+    """Verify get_ticket routes correctly by mocking Azure and Jira dependencies."""
+    
+    # 1. Mock Azure Key Vault to return a fake token immediately
+    mock_vault_instance = MagicMock()
+    mock_vault_instance.get_secret.return_value.value = "fake_jsm_token"
+    mock_secret_client.return_value = mock_vault_instance
+
+    # 2. Mock the JSM response to return expected payload containing '12345' and 'Open'
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "key": "12345",
+        "fields": {
+            "summary": "Order issue",
+            "status": {"name": "Open"},
+            "description": {
+                "type": "doc",
+                "version": 1,
+                "content": [{
+                    "type": "paragraph",
+                    "content": [{"type": "text", "text": "I didn’t receive order no 123456."}]
+                }]
+            }
+        }
+    }
+    mock_request.return_value = mock_response
+
+    # Execute the tool
+    payload = {"id": "12345"}
+    result = execute_tool("get_ticket", payload)
+
+    # Assertions
     assert isinstance(result, ToolResult)
     assert "12345" in result.output
     assert "Open" in result.output
 
 
-def test_execute_tool_get_ticket_missing_id():
-    """Verify fallback string when ticket ID is unexpectedly absent."""
+@patch('jsm_client.SecretClient')
+@patch('jsm_client.DefaultAzureCredential')
+def test_execute_tool_get_ticket_missing_id(mock_cred, mock_secret_client):
+    """Verify fallback string when ticket ID is unexpectedly absent, without hitting Azure."""
+    
+    # Mock Azure even for the failure path to ensure no live network calls are attempted
+    mock_vault_instance = MagicMock()
+    mock_vault_instance.get_secret.return_value.value = "fake_jsm_token"
+    mock_secret_client.return_value = mock_vault_instance
+    
     payload = {}
     result = execute_tool("get_ticket", payload)
-    assert "UNKNOWN" in result.output
+    
+    # Assert against the actual descriptive message your code returns
+    assert "missing or empty" in result.output
 
 @patch("hubspot_client.SecretClient")
 @patch("hubspot_client.DefaultAzureCredential")
