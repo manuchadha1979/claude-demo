@@ -46,7 +46,7 @@ def test_execute_tool_get_ticket_success(mock_request, mock_cred, mock_secret_cl
 
     # Assertions
     assert isinstance(result, ToolResult)
-    assert "12345" in result.output
+    assert "123456" in result.output
     assert "Open" in result.output
 
 @patch('jsm_client.SecretClient')
