@@ -1,6 +1,3 @@
-import os
-import sys
-from anthropic import Anthropic
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 from anthropic_chat import get_anthropic_client, MODELS
