@@ -6,6 +6,7 @@ from jsm_client import get_ticket,get_available_transitions,apply_ticket_transit
 from supabase_client import lookup_customer_orders
 from slack_client import post_message_to_channel
 from gmail_client import send_gmail_email
+from square_client import get_discount_code
 
 class ToolResult(BaseModel):
     output: str  # Or Any, if your tool returns dicts/lists sometimes
@@ -26,6 +27,36 @@ def execute_tool(name: str, input_data: dict) -> ToolResult:
                     output=output_text
             )    
 
+    elif name == "get_discount_code":
+        # 1. Extract the order_id from Claude's input data (matches the schema property name)
+        order_id = input_data.get("order_id", "")
+
+        if order_id:
+            # 2. Call the function and store the resulting JSON string
+            raw_tool_output = get_discount_code(order_id)
+
+            # 3. Safely decode the JSON string back into a Python dictionary
+            try:
+                discount_data = json.loads(raw_tool_output)
+            except Exception as parse_error:
+                discount_data = {"status": "error", "details": str(parse_error)}
+
+            # 4. Parse the result dynamically based on the 'status' key
+            if discount_data.get("status") == "success":
+                # Safely pull out values using .get() to avoid KeyErrors
+                discount_code = discount_data.get("discount_code")
+                value = discount_data.get("value", "£4.00")
+                currency = discount_data.get("currency", "GBP")
+                message = discount_data.get("message", "")
+                
+                output_text = f"Successfully generated coupon code {discount_code} ({value} {currency}) for order #{order_id}. {message}"
+            else:
+                # Handle fallback error cases returned by Square or network timeouts
+                error_details = discount_data.get("details", "Unknown internal error")
+                output_text = f"Failed to generate discount code for order #{order_id}. Error: {error_details}"
+        else:
+            output_text = "Error: 'order id' parameter was missing or empty. Please provide a valid order id."
+        return ToolResult(output=output_text)
     elif name == "lookup_crm_contact":
         # 1. Extract the email from Claude's input data
         email = input_data.get("emailid", "")
@@ -212,14 +243,24 @@ def execute_tool(name: str, input_data: dict) -> ToolResult:
 
 PROMPT = """Hey, can you look into JSM ticket SUP-1? 
 Find the customer's email from that ticket so you can pull up their contact profile in HubSpot.
-Once you have their details, check their full order history in our Supabase DB to see why
- they are complaining about a missing shipment. If you find the issue, go ahead and send them a
- resolution update via SendGrid. Also, please ping the #escalations team on Slack
+Once you have their details, check the order  in our Supabase DB to see why
+ they are complaining about a missing shipment. If you find the issue, go ahead and email them a
+ resolution update along with a discount coupon as good will gesture. Also, please ping the #escalations team on Slack
  to let them know we are escalating a shipping delay for this customer. 
  Finally, once all of that is done, go ahead and change the status of the ticket in jsm"""
 
 
 tools = [
+    {
+        "name": "get_discount_code",
+        "description": "Fetch discount code from Square",
+        "input_schema": {
+            "type": "object",
+            "properties": {"order_id": {"type": "string", "description": "order ID"}
+            },
+            "required": ["order_id"],
+        },
+    },
     {
         "name": "get_ticket",
         "description": "Fetch ticket from JSM by ID",
