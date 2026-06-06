@@ -243,7 +243,7 @@ def execute_tool(name: str, input_data: dict) -> ToolResult:
 
 PROMPT = """Hey, can you look into JSM ticket SUP-1? 
 Find the customer's email from that ticket so you can pull up their contact profile in HubSpot.
-Once you have their details, check the order  in our Supabase DB to see why
+Once you have their details, check status of the order in our Supabase DB to see why
  they are complaining about a missing shipment. If you find the issue, go ahead and email them a
  resolution update along with a discount coupon as good will gesture. Also, please ping the #escalations team on Slack
  to let them know we are escalating a shipping delay for this customer. 
