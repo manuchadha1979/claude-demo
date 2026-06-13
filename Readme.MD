@@ -537,3 +537,12 @@ if __name__ == "__main__":
 | **3** | Sprint planner | Notion + Jira | Reading docs, creating structured data |
 | **4** | Invoice chaser | Airtable + SendGrid | Scheduled agents, filtering |
 | **5** | Full incident response | Slack + Supabase + GitHub + Jira | Multi-system orchestration |
+
+
+## How to run
+az login or z login --tenant <tenant-id> --use-device-code
+source .venv/bin/activate
+pip install -r requirements-dev.txt
+
+##When new packages are added in requirements.in or requirements-dev.in
+pip-compile requirements-dev.in -o requirements-dev.txt
