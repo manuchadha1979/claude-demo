@@ -170,6 +170,7 @@ def get_available_transitions(ticket_id: str) -> list:
         print(f"Error fetching transitions: {response.status_code} - {response.text}")
         return []
         
+    print(f"Successfully retrieved transitions: {response}")
     transitions_data = response.json().get("transitions", [])
     
     # Format cleanly for easy extraction or logging

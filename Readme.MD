@@ -539,10 +539,47 @@ if __name__ == "__main__":
 | **5** | Full incident response | Slack + Supabase + GitHub + Jira | Multi-system orchestration |
 
 
-## How to run
-az login or z login --tenant <tenant-id> --use-device-code
+## How to set-up
+
+# 1. Log in to Azure
+az login --tenant <tenant-id> --use-device-code
+
+# 2. Create the virtual environment
+python3 -m venv .venv
+
+# 3. Activate the environment
 source .venv/bin/activate
+
+# 4. Install all dependencies 
+# (Make sure requirements.txt and requirements-dev.txt are compiled and tracked in git)
 pip install -r requirements-dev.txt
 
-##When new packages are added in requirements.in or requirements-dev.in
-pip-compile requirements-dev.in -o requirements-dev.txt
+# # Handle new packages
+
+If you add or update packages in requirements.in or requirements-dev.in, you need to recompile the lockfiles.
+
+Always run your virtual environment (source .venv/bin/activate) before running these:
+
+Bash
+# Install pip-tools first if you haven't already
+pip install pip-tools
+
+# 1. If you updated core packages (requirements.in):
+pip-compile requirements.in
+
+# 2. If you updated dev packages (requirements-dev.in):
+pip-compile requirements-dev.in
+
+# 3. Sync your local environment with the newly generated files
+pip install -r requirements-dev.txt
+
+
+# # 3rd party stack/services
+
+https://manusworkspacepersonal-44573730.atlassian.net/jira/servicedesk/projects/SUP/queues/custom/1/SUP-1
+
+https://app-na2.hubspot.com/login/
+
+https://supabase.com/
+
+https://app.squareup.com/

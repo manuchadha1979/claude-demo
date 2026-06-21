@@ -7,6 +7,7 @@ from supabase_client import lookup_customer_orders
 from slack_client import post_message_to_channel
 from gmail_client import send_gmail_email
 from square_client import get_discount_code
+from utilities import MessageEncoder
 
 class ToolResult(BaseModel):
     output: str  # Or Any, if your tool returns dicts/lists sometimes
@@ -99,7 +100,7 @@ def execute_tool(name: str, input_data: dict) -> ToolResult:
                 
                 # Loop through each order found for this customer
                 for order in order_data:
-                    order_id = order.get("id")
+                    order_id = order.get("order_id")
                     total_amount = order.get("total_amount", 0.0)
                     status = order.get("status", "unknown")
                     created_at = order.get("created_at", "")
@@ -348,6 +349,8 @@ messages = [{"role": "user", "content": PROMPT}]
 def run_agentic_workflow():
     client = get_anthropic_client()
     while True:
+
+        print(f"sending new message {json.dumps(messages, indent=2, cls=MessageEncoder)}")
         response = client.messages.create(
             model="claude-sonnet-4-6", max_tokens=4096, tools=tools, messages=messages
         )

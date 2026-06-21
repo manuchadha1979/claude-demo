@@ -1,9 +1,30 @@
 import asyncio
-from claude_agent_sdk import query, ClaudeAgentOptions, AgentDefinition, AssistantMessage, TextBlock, ThinkingBlock, ToolUseBlock
+from claude_agent_sdk import query,HookMatcher, ClaudeAgentOptions, AgentDefinition, AssistantMessage, TextBlock, ThinkingBlock, ToolUseBlock
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 import sys
 import os
+
+async def log_hook(input_data, tool_use_id, context):
+    """
+    Automated SDK Hook: Intercepts tool execution right before 
+    they are called or finish execution.
+    """
+    print("\n" + "="*60)
+    print("🎯 [Log HOOK TRIGGERED]")
+    print(f"Tool Use ID: {tool_use_id}")
+    print(f"Input Data: {input_data}")
+    print(f"Context: {context}")
+    print("="*60 + "\n")
+            
+    return {
+            "hookSpecificOutput": {
+                "hookEventName": input_data["hook_event_name"],
+                "permissionDecision": "allow",
+                "permissionDecisionReason": "Logged for auditing purposes.",
+            }
+        }
+
 
 def get_anthropic_key():
     credential = DefaultAzureCredential()
@@ -28,23 +49,33 @@ async def main():
     market_researcher = AgentDefinition(
         description="Researches market trends and infrastructure statistics.",
         prompt="You are an expert market researcher. Provide a short breakdown based on your knowledge base.",
-        tools=[] 
+        tools=[]
     )
     
     tech_analyst = AgentDefinition(
         description="Audits software configurations and architectural code patterns.",
         prompt="You are a technical analyst. Review code configurations based on your knowledge base.",
-        tools=[] 
     )
 
     # 2. Create the Hub Coordinator Options
+    # 2. Create the Hub Coordinator Options
     hub_options = ClaudeAgentOptions(
-        system_prompt="""You are the Coordinator. Break down user requests and delegate tasks. 
-        You MUST pass the subagents ONLY the context relevant to their task to avoid context pollution.""",
+        system_prompt="""You are the Coordinator. Break down user requests and delegate tasks.
+        
+        CRITICAL ROUTING RULES:
+        1. You have access to exactly two specialists: 'market_researcher' and 'tech_analyst'. 
+        2. You MUST use these exact string keys when delegating tasks to the Agent tool. Do NOT invent generic names like 'general-purpose'.
+        3. Pass the subagents ONLY the context relevant to their task to avoid context pollution.""",
         allowed_tools=["Agent"], 
         agents={
             "market_researcher": market_researcher,
             "tech_analyst": tech_analyst
+        },
+        hooks={
+            # Register the hook for PreToolUse events
+            # The matcher filters to only Write and Edit tool calls
+            "PreToolUse": [HookMatcher(hooks=[log_hook])],
+            "PostToolUse": [HookMatcher(hooks=[log_hook])]
         }
     )
 
@@ -56,8 +87,9 @@ async def main():
         
         async for message in query(
             prompt="""Evaluate the AI infrastructure market using the market researcher. 
-                    Then, pass those infrastructure findings to the tech analyst to audit standard 
-                    architectural software code patterns used for hosting them.""",
+                    Then, switch to the tech analyst to outline standard architectural code patterns, 
+                    and explicitly force the tech analyst to use their spell_check tool to audit 
+                    the spelling accuracy of their final architectural notes.""",
             options=hub_options
         ):
             # FIX: Use isinstance checks to process the official strongly-typed SDK messages
