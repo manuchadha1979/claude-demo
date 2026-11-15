@@ -3,6 +3,9 @@ from email.mime.multipart import MIMEMultipart
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 import smtplib
+import imaplib
+import email
+from email.header import decode_header, make_header
 
 
 # --- AZURE & GMAIL CONFIGURATION ---
@@ -55,7 +58,55 @@ def send_gmail_email(to_email: str, subject: str, body_content: str):
     finally:
         server.quit()
 
+def _extract_text(msg: email.message.Message) -> str:
+    """Returns the plain-text body of a message (first text/plain part)."""
+    if msg.is_multipart():
+        for part in msg.walk():
+            if (part.get_content_type() == "text/plain"
+                    and "attachment" not in str(part.get("Content-Disposition", ""))):
+                payload = part.get_payload(decode=True) or b""
+                return payload.decode(part.get_content_charset() or "utf-8", errors="replace")
+        return ""
+    payload = msg.get_payload(decode=True) or b""
+    return payload.decode(msg.get_content_charset() or "utf-8", errors="replace")
+
+
+def read_gmail_inbox(query: str = "ALL", limit: int = 10, mailbox: str = "INBOX") -> list[dict]:
+    """Reads recent emails over IMAP using the same Azure Vault app password.
+
+    `query` is an IMAP search string, e.g. 'UNSEEN', 'FROM "a@b.com"', 'SUBJECT "invoice"'.
+    Returns up to `limit` messages, newest first.
+    """
+    app_password = get_gmail_password_from_vault()
+    results = []
+    with imaplib.IMAP4_SSL("imap.gmail.com", 993) as imap:
+        imap.login(SENDER_EMAIL, app_password)
+        imap.select(mailbox, readonly=True)  # readonly: don't mark messages as read
+        status, data = imap.search(None, query)
+        if status != "OK":
+            raise RuntimeError(f"IMAP search failed: {query}")
+        ids = data[0].split()[-limit:][::-1]
+        for msg_id in ids:
+            status, msg_data = imap.fetch(msg_id, "(BODY.PEEK[])")
+            if status != "OK":
+                continue
+            msg = email.message_from_bytes(msg_data[0][1])
+            results.append({
+                "id": msg_id.decode(),
+                "from": str(make_header(decode_header(msg.get("From", "")))),
+                "subject": str(make_header(decode_header(msg.get("Subject", "")))),
+                "date": msg.get("Date", ""),
+                "body": _extract_text(msg),
+            })
+    return results
+
+
 # --- EXAMPLE RUN ---
+#if __name__ == "__main__":
+#    for m in read_gmail_inbox("UNSEEN", limit=5):
+#        print(m["date"], m["from"], "-", m["subject"])
+#
+# --- SEND EXAMPLE ---
 #if __name__ == "__main__":
 #    send_gmail_email(
 #        to_email="recipient_address@example.com",

@@ -1,5 +1,59 @@
 # Agentic Application Development: Real Enterprise Systems Guide
 
+## How to set-up
+
+# 1. Log in to Azure
+az login --tenant <tenant-id> --use-device-code
+
+Sign in to the Azure portal.
+Search for and select Microsoft Entra ID (formerly Azure Active Directory).
+On the Overview page, look under the Basic information section to find your Tenant ID (or go to Properties).
+Click the Copy to clipboard icon next to the ID
+
+# 2. Create the virtual environment (on new setup). Go to step 3 for existing setup
+python3 -m venv .venv
+
+# 3. Activate the environment
+source .venv/bin/activate
+
+# 4. Install all dependencies 
+# (Make sure requirements.txt and requirements-dev.txt are compiled and tracked in git)
+pip install -r requirements-dev.txt
+
+# # Handle new packages
+
+If you add or update packages in requirements.in or requirements-dev.in, you need to recompile the lockfiles.
+
+Always run your virtual environment (source .venv/bin/activate) before running these:
+
+Bash
+# Install pip-tools first if you haven't already
+pip install pip-tools
+
+# 1. If you updated core packages (requirements.in):
+pip-compile requirements.in
+
+# 2. If you updated dev packages (requirements-dev.in):
+pip-compile requirements-dev.in
+
+# 3. Sync your local environment with the newly generated files
+pip install -r requirements-dev.txt
+
+
+# # 3rd party stack/services
+
+https://manusworkspacepersonal-44573730.atlassian.net/jira/servicedesk/projects/SUP/queues/custom/1/SUP-1
+
+https://app-na2.hubspot.com/login/
+
+https://supabase.com/
+
+https://app.squareup.com/
+
+## vscode commands (MAC)
+⌘ + ⇧ + P command palette
+⌃ + ⌘ + i  (mac) - github copilot chat (use github.com login)
+
 ## Systems Available on Free / Solo Plans
 
 | System | Category | Free Plan Details |
@@ -539,47 +593,3 @@ if __name__ == "__main__":
 | **5** | Full incident response | Slack + Supabase + GitHub + Jira | Multi-system orchestration |
 
 
-## How to set-up
-
-# 1. Log in to Azure
-az login --tenant <tenant-id> --use-device-code
-
-# 2. Create the virtual environment
-python3 -m venv .venv
-
-# 3. Activate the environment
-source .venv/bin/activate
-
-# 4. Install all dependencies 
-# (Make sure requirements.txt and requirements-dev.txt are compiled and tracked in git)
-pip install -r requirements-dev.txt
-
-# # Handle new packages
-
-If you add or update packages in requirements.in or requirements-dev.in, you need to recompile the lockfiles.
-
-Always run your virtual environment (source .venv/bin/activate) before running these:
-
-Bash
-# Install pip-tools first if you haven't already
-pip install pip-tools
-
-# 1. If you updated core packages (requirements.in):
-pip-compile requirements.in
-
-# 2. If you updated dev packages (requirements-dev.in):
-pip-compile requirements-dev.in
-
-# 3. Sync your local environment with the newly generated files
-pip install -r requirements-dev.txt
-
-
-# # 3rd party stack/services
-
-https://manusworkspacepersonal-44573730.atlassian.net/jira/servicedesk/projects/SUP/queues/custom/1/SUP-1
-
-https://app-na2.hubspot.com/login/
-
-https://supabase.com/
-
-https://app.squareup.com/

@@ -1,5 +1,5 @@
 import json
-from anthropic_chat_test import get_anthropic_client
+from anthropic_chat import get_anthropic_client
 from pydantic import BaseModel
 
 
@@ -17,8 +17,11 @@ def execute_tool(name, input_data):
 
 
 tools = [
+    # Gateway requires on-demand tool loading (see Anton guide, Error 446)
+    {"type": "tool_search_tool_regex_20251119", "name": "tool_search_tool_regex"},
     {
         "name": "lookup_customer",
+        "defer_loading": True,
         "description": "Looks up a customer by name and returns their details",
         "input_schema": {
             "type": "object",
@@ -32,12 +35,21 @@ tools = [
 
 messages = [{"role": "user", "content": "Find customer John Smith"}]
 
+def log_request_response(request, response):
+    print(f"Request: {json.dumps(request, indent=2)}")
+    print(f"Response: {json.dumps(response.model_dump(), indent=2)}")
 
 def run_agentic_loop():
     client = get_anthropic_client()
+    print(f"[debug] base_url: {client.base_url}")
+
     while True:
-        response = client.messages.create(
-            model="claude-sonnet-4-6", max_tokens=4096, tools=tools, messages=messages
+        response = client.beta.messages.create(
+            model="claude-sonnet-5-5",
+            max_tokens=4096,
+            tools=tools,
+            messages=messages,
+            betas=["advanced-tool-use-2025-11-20"],
         )
 
         print(f"response: {json.dumps(response.model_dump(), indent=2)}")

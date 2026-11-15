@@ -1,3 +1,5 @@
+import os
+import subprocess
 import sys
 
 import anthropic
@@ -14,7 +16,25 @@ MODELS = [
 PROMPT = "hello world!"
 
 
+TOKEN_HELPER = os.path.expanduser("~/.claude/aigw-token-helper-darwin-arm64")
+
+
+def get_gateway_client():
+    """Client for the AI gateway, which requires an Okta JWT (Bearer), not an API key."""
+    try:
+        token = subprocess.run(
+            [TOKEN_HELPER, "--quiet"], capture_output=True, text=True, check=True
+        ).stdout.strip()
+    except Exception as e:
+        print(f"failed to get gateway token {e}")
+        sys.exit(1)
+    return anthropic.Anthropic(auth_token=token, api_key=None)
+
+
 def get_anthropic_client():
+    if os.environ.get("ANTHROPIC_BASE_URL"):
+        return get_gateway_client()
+
     credential = DefaultAzureCredential()
     vault_client = SecretClient(
         vault_url="https://claude-demo-vault.vault.azure.net/", credential=credential
